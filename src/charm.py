@@ -6,7 +6,11 @@
 
 import logging
 
+import yaml
+
 import ops
+
+from jinja2 import Environment, FileSystemLoader
 
 logger = logging.getLogger(__name__)
 
@@ -22,6 +26,9 @@ class CharmAssistantCharm(ops.CharmBase):
     def _on_start(self, event: ops.StartEvent):
         """Handle start event."""
         self.unit.status = ops.ActiveStatus()
+
+    def _on_config_changed(self, event):
+        self._update_config_file("/etc/charm-assistant-api.yaml")
 
     def _actions_is_list(self, actions):
         return isinstance(actions, list)
@@ -55,6 +62,37 @@ class CharmAssistantCharm(ops.CharmBase):
             if not self._valid_actions_struct(action):
                 return False
         return True
+
+    def _update_config_file(self, file_path):
+        actions = yaml.safe_load(self.config["actions"])
+
+        logger.debug("actions:%s", actions)
+
+        # Check if actions is configured
+        if actions is None:
+            self.unit.status = ops.BlockedStatus("Actions not configured")
+            return
+
+        # Check if the configuration is valid
+        if not self._valid_actions(actions):
+            self.unit.status = ops.BlockedStatus("Invalid actions structure")
+            return
+
+        # Write the config file to disk
+        self._write_config_file(file_path, self._render_config_file(actions))
+        logger.debug("New actions configured")
+        self._update_layer_and_restart(None)
+
+    def _write_config_file(file_path, file_content):
+        with open(file_path, "w") as f:
+            f.write(file_content)
+
+    def _render_config_file(actions):
+        template_dir = "../templates"
+        env = Environment(loader=FileSystemLoader(template_dir))
+        template = env.get_template("charm-assistant-api.jinja")
+
+        return template.render(actions)
 
 
 if __name__ == "__main__":  # pragma: nocover
