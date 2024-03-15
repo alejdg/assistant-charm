@@ -38,3 +38,26 @@ bases:
     run-on:
     - name: ubuntu
       channel: "22.04"
+    - name: ubuntu
+      channel: "20.04"
+
+
+subordinate: True
+
+requires:
+  backend:
+    interface: juju-info
+    scope: container
+
+config:
+  options:
+    actions:
+      default: ""
+      description: |
+        - name: action1
+          cmd: command1
+        - name: action2
+          cmd: command2
+        - name: action3
+          cmd: command3
+      type: string
