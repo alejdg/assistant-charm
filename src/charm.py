@@ -6,6 +6,8 @@
 
 import logging
 
+from subprocess import check_call
+
 import yaml
 
 import ops
@@ -26,6 +28,36 @@ class CharmAssistantCharm(ops.CharmBase):
     def _on_start(self, event: ops.StartEvent):
         """Handle start event."""
         self.unit.status = ops.ActiveStatus()
+
+    def _on_install(self, event):
+        """Handle the install event"""
+        self._install_systemd()
+        self._reload_systemctl()
+        self._enable_service()
+
+    def _install_systemd(self):
+        try:
+            check_call(
+                [
+                    "install",
+                    "-m",
+                    "0644",
+                    "../files/systemd",
+                    "/etc/systemd/system/charm-assistant-api.service",
+                ]
+            )
+        except ops.CalledProcessError as e:
+            # If the command returns a non-zero return code,
+            # put the charm in blocked state
+            logger.debug("Setting up Flaks failed with return code %d", e)
+            self.unit.status = ops.BlockedStatus("Failed to install packages")
+
+    def _reload_systemctl(self):
+        check_call(["sudo", "systemctl", "daemon-reload"])
+
+    def _enable_service(self):
+        check_call(["sudo", "systemctl", "start", "assistant-api.service"])
+        check_call(["sudo", "systemctl", "enable", "assistant-api.service"])
 
     def _on_config_changed(self, event):
         self._update_config_file("/etc/charm-assistant-api.yaml")
