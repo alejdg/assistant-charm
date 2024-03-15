@@ -1,0 +1,14 @@
+[Unit]
+Description=Charm Assistant API Server
+After=network.target
+
+[Service]
+User=ubuntu
+Group=ubuntu
+# TODO set the correct juju path here
+WorkingDirectory=/path/to/your/flask/app
+ExecStart=/usr/bin/python3 /path/to/your/flask/app/app.py
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
