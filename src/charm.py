@@ -6,6 +6,7 @@
 
 import logging
 
+import os
 from subprocess import check_call
 
 import yaml
@@ -24,6 +25,7 @@ class CharmAssistantCharm(ops.CharmBase):
         super().__init__(*args)
         self.framework.observe(self.on.start, self._on_start)
         self.framework.observe(self.on.config_changed, self._on_config_changed)
+        self.template_dir = os.path.join(os.getenv("JUJU_CHARM_DIR"), "templates")
 
     def _on_start(self, event: ops.StartEvent):
         """Handle start event."""
@@ -37,15 +39,8 @@ class CharmAssistantCharm(ops.CharmBase):
 
     def _install_systemd(self):
         try:
-            check_call(
-                [
-                    "install",
-                    "-m",
-                    "0644",
-                    "../files/systemd",
-                    "/etc/systemd/system/charm-assistant-api.service",
-                ]
-            )
+            file_path = "/etc/systemd/system/charm-assistant-api.service"
+            self._write_config_file(file_path, self._render_systemd_file())
         except ops.CalledProcessError as e:
             # If the command returns a non-zero return code,
             # put the charm in blocked state
@@ -70,6 +65,9 @@ class CharmAssistantCharm(ops.CharmBase):
 
     def _valid_actions_struct(self, actions):
         for action in actions:
+            if not self._action_is_dict(action):
+                logger.debug("Action is not a dict")
+                return False
             if "name" not in action or "cmd" not in action:
                 return False
         return True
@@ -88,17 +86,18 @@ class CharmAssistantCharm(ops.CharmBase):
             return False
 
         # Each action must be a dictionary and follow our structure
-        for action in actions:
-            if not self._action_is_dict(action):
-                return False
-            if not self._valid_actions_struct(action):
-                return False
+        if not self._valid_actions_struct(actions):
+            logger.debug("Action structure is wrong.")
+            return False
         return True
 
     def _update_config_file(self, file_path):
-        actions = yaml.safe_load(self.config["actions"])
-
-        logger.debug("actions:%s", actions)
+        try:
+            actions = yaml.safe_load(self.config["actions"])
+        except yaml.YAMLError as e:
+            logger.debug("Error parsing YAML file: %s", e)
+            self.unit.status = ops.BlockedStatus("Invalid actions configuration")
+            return
 
         # Check if actions is configured
         if actions is None:
@@ -113,18 +112,25 @@ class CharmAssistantCharm(ops.CharmBase):
         # Write the config file to disk
         self._write_config_file(file_path, self._render_config_file(actions))
         logger.debug("New actions configured")
-        self._update_layer_and_restart(None)
+        self.unit.status = ops.ActiveStatus("Actions configured")
 
-    def _write_config_file(file_path, file_content):
-        with open(file_path, "w") as f:
+    def _write_config_file(self, file_path, file_content):
+        with open(file_path, encoding="utf-8", mode="w") as f:
             f.write(file_content)
+        os.chmod(file_path, 0o644)
 
-    def _render_config_file(actions):
-        template_dir = "../templates"
-        env = Environment(loader=FileSystemLoader(template_dir))
+    def _render_config_file(self, actions):
+        env = Environment(loader=FileSystemLoader(self.template_dir))
         template = env.get_template("charm-assistant-api.jinja")
+        actions_yaml = yaml.dump(actions)
 
-        return template.render(actions)
+        return template.render(actions=actions_yaml)
+
+    def _render_systemd_file(self):
+        env = Environment(loader=FileSystemLoader(self.template_dir))
+        template = env.get_template("systemd.jinja")
+
+        return template.render(os.getenv("JUJU_CHARM_DIR"))
 
 
 if __name__ == "__main__":  # pragma: nocover
