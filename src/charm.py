@@ -21,11 +21,15 @@ logger = logging.getLogger(__name__)
 class CharmAssistantCharm(ops.CharmBase):
     """Charm the application."""
 
+    CHARM_DIR = os.getenv("JUJU_CHARM_DIR")
+    SERVICE_NAME = "charm-assistant-api.service"
+    CONFIG_FILE = "/etc/charm-assistant-api.yaml"
+
     def __init__(self, *args):
         super().__init__(*args)
-        self.framework.observe(self.on.start, self._on_start)
+        self.framework.observe(self.on.install, self._on_install)
         self.framework.observe(self.on.config_changed, self._on_config_changed)
-        self.template_dir = os.path.join(os.getenv("JUJU_CHARM_DIR"), "templates")
+        self.template_dir = os.path.join(self.CHARM_DIR, "templates")
 
     def _on_start(self, event: ops.StartEvent):
         """Handle start event."""
@@ -38,24 +42,26 @@ class CharmAssistantCharm(ops.CharmBase):
         self._enable_service()
 
     def _install_systemd(self):
+        logger.info("Installing the api service")
+
         try:
-            file_path = "/etc/systemd/system/charm-assistant-api.service"
+            file_path = f"/etc/systemd/system/{self.SERVICE_NAME}"
             self._write_config_file(file_path, self._render_systemd_file())
-        except ops.CalledProcessError as e:
+        except os.error as e:
             # If the command returns a non-zero return code,
-            # put the charm in blocked state
-            logger.debug("Setting up Flaks failed with return code %d", e)
+            # put the charm in blocked state_install_systemd
+            logger.debug("Setting up the api service failed with return code %d", e)
             self.unit.status = ops.BlockedStatus("Failed to install packages")
 
     def _reload_systemctl(self):
         check_call(["sudo", "systemctl", "daemon-reload"])
 
     def _enable_service(self):
-        check_call(["sudo", "systemctl", "start", "assistant-api.service"])
-        check_call(["sudo", "systemctl", "enable", "assistant-api.service"])
+        check_call(["sudo", "systemctl", "start", self.SERVICE_NAME])
+        check_call(["sudo", "systemctl", "enable", self.SERVICE_NAME])
 
     def _on_config_changed(self, event):
-        self._update_config_file("/etc/charm-assistant-api.yaml")
+        self._update_config_file(self.CONFIG_FILE)
 
     def _actions_is_list(self, actions):
         return isinstance(actions, list)
@@ -129,8 +135,11 @@ class CharmAssistantCharm(ops.CharmBase):
     def _render_systemd_file(self):
         env = Environment(loader=FileSystemLoader(self.template_dir))
         template = env.get_template("systemd.jinja")
+        context = {
+            "charm_dir": self.CHARM_DIR,
+        }
 
-        return template.render(os.getenv("JUJU_CHARM_DIR"))
+        return template.render(context)
 
 
 if __name__ == "__main__":  # pragma: nocover
