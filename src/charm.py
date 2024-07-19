@@ -37,6 +37,9 @@ class CharmAssistantCharm(ops.CharmBase):
 
     def _on_install(self, event):
         """Handle the install event"""
+        # Initialize the config file
+        self._update_config_file(self.CONFIG_FILE)
+        # Create the web server service
         self._install_systemd()
         self._reload_systemctl()
         self._enable_service()
@@ -107,6 +110,7 @@ class CharmAssistantCharm(ops.CharmBase):
 
         # Check if actions is configured
         if actions is None:
+            self._write_config_file(file_path, "")
             self.unit.status = ops.BlockedStatus("Actions not configured")
             return
 
