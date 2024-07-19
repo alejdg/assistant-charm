@@ -9,12 +9,13 @@ class CharmAssistantAPIServer:
 
     def load_config(self, config_file):
         with open(config_file, "r") as f:
-            return yaml.load(f)
+            return yaml.safe_load(f)
 
     def configure_routes(self):
-        for route_config in self.config["routes"]:
-            route_path = route_config["path"]
-            route_func_name = route_config["func"]
+        print(self.config)
+        for action in self.config["actions"]:
+            route_path = action["name"].replace(" ", "_").to_lower()
+            route_func_name = action["func"]
             route_func = getattr(self, route_func_name)
             self.app.route(route_path, methods=["GET"])(route_func)
 
@@ -30,5 +31,5 @@ class CharmAssistantAPIServer:
 
 
 if __name__ == "__main__":
-    api = CharmAssistantAPIServer("/etc/config.yaml")
+    api = CharmAssistantAPIServer("/etc/charm-assistant-api.yaml")
     api.run()
