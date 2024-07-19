@@ -1,19 +1,36 @@
 import subprocess
 from flask import Flask, jsonify
 import yaml
+from flask_httpauth import HTTPTokenAuth
 
 
 class CharmAssistantAPIServer:
     def __init__(self, config_file):
         self.app = Flask(__name__)
         self.config = self.load_config(config_file)
+        self.auth_enabled = self.config.get("auth_enabled", False)
+
+        if self.auth_enabled:
+            self.auth = HTTPTokenAuth(scheme="Bearer")
+            self.tokens = self.load_tokens(config_file)
+            self.auth.verify_token(self.verify_token)
+
+        self.configure_routes()
 
     def load_config(self, config_file):
         with open(config_file, "r") as f:
             return yaml.safe_load(f)
 
+    def load_tokens(self, config_file):
+        config = self.load_config(config_file)
+        return {token: username for token, username in config.get("tokens", {}).items()}
+
+    def verify_token(self, token):
+        # Validate the token and return associated user or None
+        return self.tokens.get(token)
+
     def configure_routes(self):
-        for action in self.config["actions"]:
+        for action in self.config.get("actions", []):
             route_name = action["name"].replace(" ", "_").lower()
             route_path = "/" + route_name
 
@@ -25,33 +42,25 @@ class CharmAssistantAPIServer:
 
                 return route_func
 
-            # Create the route function with the specific command
             route_func = make_route_func(action["cmd"])
 
-            # Add the route to the Flask app
-            self.app.route(route_path, methods=["GET"], endpoint=route_name)(route_func)
+            if self.auth_enabled:
+                self.app.route(route_path, methods=["GET"], endpoint=route_name)(
+                    self.auth.login_required(route_func)
+                )
+            else:
+                self.app.route(route_path, methods=["GET"], endpoint=route_name)(route_func)
 
     def run(self):
-        self.configure_routes()
         self.app.run(debug=True)
-
-    def protected_route(self):
-        return jsonify({"message": "Protected API is accessed"})
-
-    def unprotected_route(self):
-        return jsonify({"message": "Unprotected API is accessed"})
 
     def run_bash_command(self, command):
         try:
-            # Execute the command
             result = subprocess.run(
                 command, shell=True, check=True, text=True, capture_output=True
             )
-
-            # Return the output
             return result.stdout
         except subprocess.CalledProcessError as e:
-            # Handle errors in the called executable
             return f"An error occurred: {e.stderr}"
 
 

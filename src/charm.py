@@ -119,8 +119,27 @@ class CharmAssistantCharm(ops.CharmBase):
             self.unit.status = ops.BlockedStatus("Invalid actions structure")
             return
 
+        auth_enabled = self.config["auth-enabled"]
+
+        tokens = self.config["tokens"]
+
+        if tokens is not None:
+            try:
+                tokens = yaml.safe_load(tokens)
+            except yaml.YAMLError as e:
+                logger.debug("Error parsing YAML file for tokens: %s", e)
+                self.unit.status = ops.BlockedStatus("Invalid tokens configuration")
+                return
+
+            # Check if tokens is a valid dictionary
+            if not isinstance(tokens, dict) or not all(
+                isinstance(k, str) and isinstance(v, str) for k, v in tokens.items()
+            ):
+                self.unit.status = ops.BlockedStatus("Invalid tokens structure")
+                return
+
         # Write the config file to disk
-        self._write_config_file(file_path, self._render_config_file(actions))
+        self._write_config_file(file_path, self._render_config_file(actions, auth_enabled, tokens))
         logger.debug("New actions configured")
         self.unit.status = ops.ActiveStatus("Actions configured")
 
@@ -129,12 +148,17 @@ class CharmAssistantCharm(ops.CharmBase):
             f.write(file_content)
         os.chmod(file_path, 0o644)
 
-    def _render_config_file(self, actions):
+    def _render_config_file(self, actions, auth_enabled, tokens):
         env = Environment(loader=FileSystemLoader(self.template_dir))
         template = env.get_template("charm-assistant-api.jinja")
-        actions_yaml = yaml.dump(actions)
 
-        return template.render(actions=actions_yaml)
+        config_data = {
+            "actions": yaml.dump(actions),
+            "auth_enabled": auth_enabled,
+            "tokens": tokens if tokens is not None else {},
+        }
+
+        return template.render(config_data)
 
     def _render_systemd_file(self):
         env = Environment(loader=FileSystemLoader(self.template_dir))

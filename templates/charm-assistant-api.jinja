@@ -1,2 +1,10 @@
 actions:
 {{ actions }}
+
+{%- if auth_enabled %}
+auth_enabled: true
+tokens:
+{%- for token, username in tokens.items() %}
+  {{ token }}: {{ username }}
+{%- endfor %}
+{% endif %}

@@ -61,3 +61,18 @@ config:
         - name: action3
           cmd: command3
       type: string
+    auth-enabled:
+      default: false
+      description: |
+        Enable authentication requirement to access the endpoints.
+      type: boolean
+    tokens:
+      default: ""
+      description: |
+        Tokens allowed to access the endpoints. Each line should contain
+        a token followed by a user. Any string is allowed as a token. Example:
+
+        token1: user1
+        token2: user2
+        XXXXXX: teamA
+      type: string
