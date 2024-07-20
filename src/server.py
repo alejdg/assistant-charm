@@ -2,6 +2,7 @@ import subprocess
 from flask import Flask, jsonify
 import yaml
 from flask_httpauth import HTTPTokenAuth
+from waitress import serve
 
 
 class CharmAssistantAPIServer:
@@ -52,7 +53,7 @@ class CharmAssistantAPIServer:
                 self.app.route(route_path, methods=["GET"], endpoint=route_name)(route_func)
 
     def run(self):
-        self.app.run(debug=True)
+        serve(self.app, host="0.0.0.0", port=8889)
 
     def run_bash_command(self, command):
         try:
