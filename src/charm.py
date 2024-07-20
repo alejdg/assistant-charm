@@ -63,8 +63,12 @@ class CharmAssistantCharm(ops.CharmBase):
         check_call(["sudo", "systemctl", "start", self.SERVICE_NAME])
         check_call(["sudo", "systemctl", "enable", self.SERVICE_NAME])
 
+    def _restart_service(self):
+        check_call(["sudo", "systemctl", "restart", self.SERVICE_NAME])
+
     def _on_config_changed(self, event):
         self._update_config_file(self.CONFIG_FILE)
+        self._restart_service()
 
     def _actions_is_list(self, actions):
         return isinstance(actions, list)
