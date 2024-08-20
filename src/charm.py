@@ -28,7 +28,9 @@ class CharmAssistantCharm(ops.CharmBase):
     def __init__(self, *args):
         super().__init__(*args)
         self.framework.observe(self.on.install, self._on_install)
+        self.framework.observe(self.on.start, self._on_start)
         self.framework.observe(self.on.config_changed, self._on_config_changed)
+        self.framework.observe(self.on.remove, self._on_remove)
         self.template_dir = os.path.join(self.CHARM_DIR, "templates")
 
     def _on_start(self, event: ops.StartEvent):
@@ -36,7 +38,7 @@ class CharmAssistantCharm(ops.CharmBase):
         self.unit.status = ops.ActiveStatus()
         self._open_ports()
 
-    def _on_install(self, event):
+    def _on_install(self, event: ops.InstallEvent):
         """Handle the install event"""
         # Initialize the config file
         self._update_config_file(self.CONFIG_FILE)
@@ -44,6 +46,12 @@ class CharmAssistantCharm(ops.CharmBase):
         self._install_systemd()
         self._reload_systemctl()
         self._enable_service()
+
+    def _on_remove(self, event: ops.RemoveEvent):
+        """Handle the remove event"""
+        self._disable_service()
+        self._remove_systemd()
+        self._reload_systemctl()
 
     def _install_systemd(self):
         logger.info("Installing the api service")
@@ -57,8 +65,24 @@ class CharmAssistantCharm(ops.CharmBase):
             logger.debug("Setting up the api service failed with return code %d", e)
             self.unit.status = ops.BlockedStatus("Failed to install packages")
 
+    def _remove_systemd(self):
+        logger.info("Uninstalling the API service")
+
+        try:
+            file_path = f"/etc/systemd/system/{self.SERVICE_NAME}"
+            os.remove(file_path)
+        except os.error as e:
+            # If the command returns a non-zero return code,
+            # put the charm in blocked state_install_systemd
+            logger.debug("Uninstalling the API service failed with return code %d", e)
+            self.unit.status = ops.BlockedStatus("Failed to uninstall packages")
+
     def _reload_systemctl(self):
         check_call(["sudo", "systemctl", "daemon-reload"])
+
+    def _disable_service(self):
+        check_call(["sudo", "systemctl", "stop", self.SERVICE_NAME])
+        check_call(["sudo", "systemctl", "disable", self.SERVICE_NAME])
 
     def _enable_service(self):
         check_call(["sudo", "systemctl", "start", self.SERVICE_NAME])
@@ -176,7 +200,7 @@ class CharmAssistantCharm(ops.CharmBase):
 
     def _open_ports(self):
         try:
-            self.unit.open_port("tcp", 5432)
+            self.unit.open_port("tcp", self.config["port"])
         except ops.model.ModelError:
             logger.exception("failed to open port")
 
