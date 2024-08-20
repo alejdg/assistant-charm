@@ -8,19 +8,11 @@ Avoid using this README file for information that is maintained or published els
 Use links instead.
 -->
 
-# charm-assistant
+# Task API charm
 
-Charmhub package name: operator-template
-More information: https://charmhub.io/charm-assistant
+Charmhub package name: task-api-charm
+More information: <https://charmhub.io/task-api-charm>
 
-Describe your charm in one or two sentences.
+A subordinate charm that provides webhooks to run commands in a deployed application.
 
 ## Other resources
-
-<!-- If your charm is documented somewhere else other than Charmhub, provide a link separately. -->
-
-- [Read more](https://example.com)
-
-- [Contributing](CONTRIBUTING.md) <!-- or link to other contribution documentation -->
-
-- See the [Juju SDK documentation](https://juju.is/docs/sdk) for more information about developing and improving charms.

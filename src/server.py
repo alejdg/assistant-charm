@@ -5,7 +5,7 @@ from flask_httpauth import HTTPTokenAuth
 from waitress import serve
 
 
-class CharmAssistantAPIServer:
+class TaskAPIServer:
     def __init__(self, config_file):
         self.app = Flask(__name__)
         self.config = self.load_config(config_file)
@@ -70,5 +70,5 @@ class CharmAssistantAPIServer:
 
 
 if __name__ == "__main__":
-    api = CharmAssistantAPIServer("/etc/charm-assistant-api.yaml")
+    api = TaskAPIServer("/etc/task-api.yaml")
     api.run()

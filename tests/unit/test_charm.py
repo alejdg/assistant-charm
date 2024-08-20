@@ -7,12 +7,12 @@ import unittest
 
 import ops
 import ops.testing
-from charm import CharmAssistantCharm
+from charm import TaskAPICharm
 
 
 class TestCharm(unittest.TestCase):
     def setUp(self):
-        self.harness = ops.testing.Harness(CharmAssistantCharm)
+        self.harness = ops.testing.Harness(TaskAPICharm)
         self.addCleanup(self.harness.cleanup)
 
     def test_start(self):

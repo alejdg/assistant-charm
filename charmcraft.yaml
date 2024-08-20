@@ -1,36 +1,21 @@
-# This file configures Charmcraft.
-# See https://juju.is/docs/sdk/charmcraft-config for guidance.
-
-# (Required)
-name: charm-webhook-assistant
- 
-
-# (Required)
+name: task-api-charm
 type: charm
+title: Task API charm
 
+summary:  A subordinate charm that provides webhooks to run commands in a deployed application.
 
-# (Recommended)
-title: Charm Webhook assistant
-
-
-# (Required)
-summary:  A subordinate charm that provides a webhooks to run commands in a deployed application.
-
-
-# (Required)
 description: |
 
-  A subordinate charm that provides a webhooks to run commands in a deployed application.
+  A subordinate charm that provides webhooks to run commands in a deployed application.
 
   This charm allows for the configuration of custom actions that can be triggered through webhooks.
 
   It aims to provided an external trigger to allow things to be done progamatically in the units
-  without the need of ssh'ing into units.
+  without the need o ssh'ing into units.
 
   This charm is useful for application admins who need to automate tasks in a multitude of
   applications using different charms.
 
-# (Required for 'charm' type)
 bases:
   - build-on:
     - name: ubuntu

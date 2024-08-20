@@ -18,12 +18,12 @@ from jinja2 import Environment, FileSystemLoader
 logger = logging.getLogger(__name__)
 
 
-class CharmAssistantCharm(ops.CharmBase):
+class TaskApiCharm(ops.CharmBase):
     """Charm the application."""
 
     CHARM_DIR = os.getenv("JUJU_CHARM_DIR")
-    SERVICE_NAME = "charm-assistant-api.service"
-    CONFIG_FILE = "/etc/charm-assistant-api.yaml"
+    SERVICE_NAME = "task-api.service"
+    CONFIG_FILE = "/etc/task-api.yaml"
 
     def __init__(self, *args):
         super().__init__(*args)
@@ -183,7 +183,7 @@ class CharmAssistantCharm(ops.CharmBase):
 
     def _render_config_file(self, actions, auth_enabled, tokens, port):
         env = Environment(loader=FileSystemLoader(self.template_dir))
-        template = env.get_template("charm-assistant-api.jinja")
+        template = env.get_template("task-api.jinja")
 
         config_data = {
             "port": port,
@@ -211,4 +211,4 @@ class CharmAssistantCharm(ops.CharmBase):
 
 
 if __name__ == "__main__":  # pragma: nocover
-    ops.main(CharmAssistantCharm)  # type: ignore
+    ops.main(TaskApiCharm)  # type: ignore
