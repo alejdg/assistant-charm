@@ -34,6 +34,7 @@ class CharmAssistantCharm(ops.CharmBase):
     def _on_start(self, event: ops.StartEvent):
         """Handle start event."""
         self.unit.status = ops.ActiveStatus()
+        self._open_ports()
 
     def _on_install(self, event):
         """Handle the install event"""
@@ -172,6 +173,12 @@ class CharmAssistantCharm(ops.CharmBase):
         }
 
         return template.render(context)
+
+    def _open_ports(self):
+        try:
+            self.unit.open_port("tcp", 5432)
+        except ops.model.ModelError:
+            logger.exception("failed to open port")
 
 
 if __name__ == "__main__":  # pragma: nocover

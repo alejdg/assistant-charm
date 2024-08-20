@@ -76,3 +76,8 @@ config:
         token2: user2
         XXXXXX: teamA
       type: string
+    port:
+      type: int
+      default: 8889
+      description: |
+        HTTP port to serve the API.
