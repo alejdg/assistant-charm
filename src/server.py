@@ -10,7 +10,6 @@ class CharmAssistantAPIServer:
         self.app = Flask(__name__)
         self.config = self.load_config(config_file)
         self.auth_enabled = self.config.get("auth_enabled", False)
-        self.default_port = 8889
 
         if self.auth_enabled:
             self.auth = HTTPTokenAuth(scheme="Bearer")
@@ -57,7 +56,7 @@ class CharmAssistantAPIServer:
         serve(
             self.app,
             host="0.0.0.0",
-            port=self.config.get("port", self.default_port),
+            port=self.config["port"],
         )
 
     def run_bash_command(self, command):
