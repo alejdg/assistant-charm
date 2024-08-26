@@ -10,6 +10,7 @@ WorkingDirectory={{ charm_dir }}
 Environment="PYTHONPATH={{ charm_dir }}/venv"
 ExecStart=/usr/bin/python3 {{ charm_dir }}/src/server.py
 Restart=always
+RestartPreventExitStatus=3
 StandardOutput=journal
 StandardError=journal
 

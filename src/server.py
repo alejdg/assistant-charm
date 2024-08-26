@@ -1,14 +1,22 @@
+import logging
 import subprocess
+import sys
 from flask import Flask, jsonify
 import yaml
 from flask_httpauth import HTTPTokenAuth
 from waitress import serve
 
 
+logger = logging.getLogger(__name__)
+
+
 class TaskAPIServer:
     def __init__(self, config_file):
         self.app = Flask(__name__)
         self.config = self.load_config(config_file)
+        if not self.config:
+            logging.info("Configuration is empty")
+            sys.exit(3)
         self.auth_enabled = self.config.get("auth_enabled", False)
 
         if self.auth_enabled:
