@@ -18,7 +18,7 @@ from jinja2 import Environment, FileSystemLoader
 logger = logging.getLogger(__name__)
 
 
-class TaskApiCharm(ops.CharmBase):
+class TaskAPICharm(ops.CharmBase):
     """Charm the application."""
 
     CHARM_DIR = os.getenv("JUJU_CHARM_DIR")
@@ -28,30 +28,36 @@ class TaskApiCharm(ops.CharmBase):
     def __init__(self, *args):
         super().__init__(*args)
         self.framework.observe(self.on.install, self._on_install)
-        self.framework.observe(self.on.start, self._on_start)
         self.framework.observe(self.on.config_changed, self._on_config_changed)
         self.framework.observe(self.on.remove, self._on_remove)
         self.template_dir = os.path.join(self.CHARM_DIR, "templates")
-
-    def _on_start(self, event: ops.StartEvent):
-        """Handle start event."""
-        self.unit.status = ops.ActiveStatus()
-        self._open_ports()
 
     def _on_install(self, event: ops.InstallEvent):
         """Handle the install event"""
         # Initialize the config file
         self._update_config_file(self.CONFIG_FILE)
-        # Create the web server service
+        # Install the service
         self._install_systemd()
-        self._reload_systemctl()
-        self._enable_service()
+        # Create the web server service
+        if self._configured():
+            self._open_ports()
+            self.unit.status = ops.ActiveStatus("Ready")
+        else:
+            logger.info("Charm not configured")
+            self.unit.status = ops.BlockedStatus("Charm not configured")
+
+    def _on_config_changed(self, event: ops.ConfigChangedEvent):
+        self._update_config_file(self.CONFIG_FILE)
+        if self._configured():
+            self._restart_service()
+            self._open_ports()
+            self.unit.status = ops.ActiveStatus("Ready")
+        else:
+            self.unit.status = ops.BlockedStatus("Charm not configured")
 
     def _on_remove(self, event: ops.RemoveEvent):
         """Handle the remove event"""
-        self._disable_service()
         self._remove_systemd()
-        self._reload_systemctl()
 
     def _install_systemd(self):
         logger.info("Installing the api service")
@@ -59,6 +65,8 @@ class TaskApiCharm(ops.CharmBase):
         try:
             file_path = f"/etc/systemd/system/{self.SERVICE_NAME}"
             self._write_config_file(file_path, self._render_systemd_file())
+            self._reload_systemctl()
+            self._enable_service()
         except os.error as e:
             # If the command returns a non-zero return code,
             # put the charm in blocked state_install_systemd
@@ -69,8 +77,10 @@ class TaskApiCharm(ops.CharmBase):
         logger.info("Uninstalling the API service")
 
         try:
+            self._disable_service()
             file_path = f"/etc/systemd/system/{self.SERVICE_NAME}"
             os.remove(file_path)
+            self._reload_systemctl()
         except os.error as e:
             # If the command returns a non-zero return code,
             # put the charm in blocked state_install_systemd
@@ -90,10 +100,6 @@ class TaskApiCharm(ops.CharmBase):
 
     def _restart_service(self):
         check_call(["sudo", "systemctl", "restart", self.SERVICE_NAME])
-
-    def _on_config_changed(self, event):
-        self._update_config_file(self.CONFIG_FILE)
-        self._restart_service()
 
     def _actions_is_list(self, actions):
         return isinstance(actions, list)
@@ -173,7 +179,7 @@ class TaskApiCharm(ops.CharmBase):
         self._write_config_file(
             file_path, self._render_config_file(actions, auth_enabled, tokens, port)
         )
-        logger.debug("New actions configured")
+        logger.info("New actions configured")
         self.unit.status = ops.ActiveStatus("Actions configured")
 
     def _write_config_file(self, file_path, file_content):
@@ -209,6 +215,10 @@ class TaskApiCharm(ops.CharmBase):
         except ops.model.ModelError:
             logger.exception("failed to open port")
 
+    def _configured(self):
+        """Check if the charm has been configured"""
+        return not os.stat(self.CONFIG_FILE).st_size == 0
+
 
 if __name__ == "__main__":  # pragma: nocover
-    ops.main(TaskApiCharm)  # type: ignore
+    ops.main(TaskAPICharm)  # type: ignore
