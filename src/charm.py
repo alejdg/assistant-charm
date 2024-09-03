@@ -5,14 +5,11 @@
 """Charm the application."""
 
 import logging
-
 import os
 from subprocess import check_call
 
-import yaml
-
 import ops
-
+import yaml
 from jinja2 import Environment, FileSystemLoader
 
 logger = logging.getLogger(__name__)
@@ -117,8 +114,7 @@ class TaskAPICharm(ops.CharmBase):
         return True
 
     def _valid_actions(self, actions):
-        """
-        Validates the actions list.
+        """Validates the actions list.
 
         Args:
             actions (list): The list of actions to validate.

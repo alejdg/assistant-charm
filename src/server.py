@@ -1,11 +1,11 @@
 import logging
 import subprocess
 import sys
-from flask import Flask, jsonify
+
 import yaml
+from flask import Flask, jsonify
 from flask_httpauth import HTTPTokenAuth
 from waitress import serve
-
 
 logger = logging.getLogger(__name__)
 
