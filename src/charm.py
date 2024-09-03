@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 
 class TaskAPICharm(ops.CharmBase):
-    """Charm the application."""
+    """Task API Charm."""
 
     CHARM_DIR = os.getenv("JUJU_CHARM_DIR")
     SERVICE_NAME = "task-api.service"
@@ -30,7 +30,7 @@ class TaskAPICharm(ops.CharmBase):
         self.template_dir = os.path.join(self.CHARM_DIR, "templates")
 
     def _on_install(self, event: ops.InstallEvent):
-        """Handle the install event"""
+        """Handle the install event."""
         # Initialize the config file
         self._update_config_file(self.CONFIG_FILE)
         # Install the service
@@ -53,7 +53,7 @@ class TaskAPICharm(ops.CharmBase):
             self.unit.status = ops.BlockedStatus("Charm not configured")
 
     def _on_remove(self, event: ops.RemoveEvent):
-        """Handle the remove event"""
+        """Handle the remove event."""
         self._remove_systemd()
 
     def _install_systemd(self):
@@ -114,14 +114,7 @@ class TaskAPICharm(ops.CharmBase):
         return True
 
     def _valid_actions(self, actions):
-        """Validates the actions list.
-
-        Args:
-            actions (list): The list of actions to validate.
-
-        Returns:
-            bool: True, False.
-        """
+        """Validate the actions list."""
         if not self._actions_is_list(actions):
             return False
 
@@ -212,7 +205,7 @@ class TaskAPICharm(ops.CharmBase):
             logger.exception("failed to open port")
 
     def _configured(self):
-        """Check if the charm has been configured"""
+        """Check if the charm has been configured."""
         return not os.stat(self.CONFIG_FILE).st_size == 0
 
 

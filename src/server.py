@@ -11,6 +11,8 @@ logger = logging.getLogger(__name__)
 
 
 class TaskAPIServer:
+    """The API server for the TaskAPI charm."""
+
     def __init__(self, config_file):
         self.app = Flask(__name__)
         self.config = self.load_config(config_file)
@@ -27,18 +29,21 @@ class TaskAPIServer:
         self.configure_routes()
 
     def load_config(self, config_file):
+        """Load config from file on disk."""
         with open(config_file, "r") as f:
             return yaml.safe_load(f)
 
     def load_tokens(self, config_file):
+        """Load the tokens from the config file on disk."""
         config = self.load_config(config_file)
-        return {token: username for token, username in config.get("tokens", {}).items()}
+        return dict(config.get("tokens", {}))
 
     def verify_token(self, token):
-        # Validate the token and return associated user or None
+        """Validate the token and return associated user."""
         return self.tokens.get(token)
 
     def configure_routes(self):
+        """Configure the API routes based on the configured tasks."""
         for action in self.config.get("actions", []):
             route_name = action["name"].replace(" ", "_").lower()
             route_path = "/" + route_name
@@ -61,6 +66,7 @@ class TaskAPIServer:
                 self.app.route(route_path, methods=["GET"], endpoint=route_name)(route_func)
 
     def run(self):
+        """Start the server in the configured port."""
         serve(
             self.app,
             host="0.0.0.0",
@@ -68,6 +74,7 @@ class TaskAPIServer:
         )
 
     def run_bash_command(self, command):
+        """Run the configured bash commands."""
         try:
             result = subprocess.run(
                 command, shell=True, check=True, text=True, capture_output=True
