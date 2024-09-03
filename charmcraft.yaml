@@ -10,7 +10,7 @@ description: |
 
   This charm allows for the configuration of custom actions that can be triggered through webhooks.
 
-  It aims to provided an external trigger to allow things to be done progammatically in the units
+  It aims to provided an external trigger to allow things to be done programmatically in the units
   without the need to ssh'ing into units.
 
   This charm is useful for Juju admins who need to automate tasks in a multitude of
