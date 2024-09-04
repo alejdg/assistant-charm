@@ -11,11 +11,12 @@ from subprocess import check_call
 import ops
 import yaml
 from jinja2 import Environment, FileSystemLoader
+from ops.main import main
 
 logger = logging.getLogger(__name__)
 
 
-class TaskAPICharm(ops.CharmBase):
+class TaskAPICharm(ops.charm.CharmBase):
     """Task API Charm."""
 
     CHARM_DIR = os.getenv("JUJU_CHARM_DIR")
@@ -29,7 +30,7 @@ class TaskAPICharm(ops.CharmBase):
         self.framework.observe(self.on.remove, self._on_remove)
         self.template_dir = os.path.join(self.CHARM_DIR, "templates")
 
-    def _on_install(self, event: ops.InstallEvent):
+    def _on_install(self, event):
         """Handle the install event."""
         # Initialize the config file
         self._update_config_file(self.CONFIG_FILE)
@@ -38,21 +39,21 @@ class TaskAPICharm(ops.CharmBase):
         # Create the web server service
         if self._configured():
             self._open_ports()
-            self.unit.status = ops.ActiveStatus("Ready")
+            self.unit.status = ops.model.ActiveStatus("Ready")
         else:
             logger.info("Charm not configured")
-            self.unit.status = ops.BlockedStatus("Charm not configured")
+            self.unit.status = ops.model.BlockedStatus("Charm not configured")
 
-    def _on_config_changed(self, event: ops.ConfigChangedEvent):
+    def _on_config_changed(self, event):
         self._update_config_file(self.CONFIG_FILE)
         if self._configured():
             self._restart_service()
             self._open_ports()
-            self.unit.status = ops.ActiveStatus("Ready")
+            self.unit.status = ops.model.ActiveStatus("Ready")
         else:
-            self.unit.status = ops.BlockedStatus("Charm not configured")
+            self.unit.status = ops.model.BlockedStatus("Charm not configured")
 
-    def _on_remove(self, event: ops.RemoveEvent):
+    def _on_remove(self, event):
         """Handle the remove event."""
         self._remove_systemd()
 
@@ -68,7 +69,7 @@ class TaskAPICharm(ops.CharmBase):
             # If the command returns a non-zero return code,
             # put the charm in blocked state_install_systemd
             logger.debug("Setting up the api service failed with return code %d", e)
-            self.unit.status = ops.BlockedStatus("Failed to install packages")
+            self.unit.status = ops.model.BlockedStatus("Failed to install packages")
 
     def _remove_systemd(self):
         logger.info("Uninstalling the API service")
@@ -82,7 +83,7 @@ class TaskAPICharm(ops.CharmBase):
             # If the command returns a non-zero return code,
             # put the charm in blocked state_install_systemd
             logger.debug("Uninstalling the API service failed with return code %d", e)
-            self.unit.status = ops.BlockedStatus("Failed to uninstall packages")
+            self.unit.status = ops.model.BlockedStatus("Failed to uninstall packages")
 
     def _reload_systemctl(self):
         check_call(["sudo", "systemctl", "daemon-reload"])
@@ -129,18 +130,18 @@ class TaskAPICharm(ops.CharmBase):
             actions = yaml.safe_load(self.config["actions"])
         except yaml.YAMLError as e:
             logger.debug("Error parsing YAML file: %s", e)
-            self.unit.status = ops.BlockedStatus("Invalid actions configuration")
+            self.unit.status = ops.model.BlockedStatus("Invalid actions configuration")
             return
 
         # Check if actions is configured
         if actions is None:
             self._write_config_file(file_path, "")
-            self.unit.status = ops.BlockedStatus("Actions not configured")
+            self.unit.status = ops.model.BlockedStatus("Actions not configured")
             return
 
         # Check if the configuration is valid
         if not self._valid_actions(actions):
-            self.unit.status = ops.BlockedStatus("Invalid actions structure")
+            self.unit.status = ops.model.BlockedStatus("Invalid actions structure")
             return
 
         auth_enabled = self.config["auth-enabled"]
@@ -152,14 +153,14 @@ class TaskAPICharm(ops.CharmBase):
                 tokens = yaml.safe_load(tokens)
             except yaml.YAMLError as e:
                 logger.debug("Error parsing YAML file for tokens: %s", e)
-                self.unit.status = ops.BlockedStatus("Invalid tokens configuration")
+                self.unit.status = ops.model.BlockedStatus("Invalid tokens configuration")
                 return
 
             # Check if tokens is a valid dictionary
             if not isinstance(tokens, dict) or not all(
                 isinstance(k, str) and isinstance(v, str) for k, v in tokens.items()
             ):
-                self.unit.status = ops.BlockedStatus("Invalid tokens structure")
+                self.unit.status = ops.model.BlockedStatus("Invalid tokens structure")
                 return
 
         port = self.config["port"]
@@ -169,7 +170,7 @@ class TaskAPICharm(ops.CharmBase):
             file_path, self._render_config_file(actions, auth_enabled, tokens, port)
         )
         logger.info("New actions configured")
-        self.unit.status = ops.ActiveStatus("Actions configured")
+        self.unit.status = ops.model.ActiveStatus("Actions configured")
 
     def _write_config_file(self, file_path, file_content):
         with open(file_path, encoding="utf-8", mode="w") as f:
@@ -200,7 +201,11 @@ class TaskAPICharm(ops.CharmBase):
 
     def _open_ports(self):
         try:
-            self.unit.open_port("tcp", self.config["port"])
+            # ops.unit.open_port("tcp", self.config["port"])
+            protocol = "tcp"
+            port = self.config["port"]
+            arg = f"{port}/{protocol}" if port is not None else protocol
+            check_call(["open-port", arg])
         except ops.model.ModelError:
             logger.exception("failed to open port")
 
@@ -210,4 +215,4 @@ class TaskAPICharm(ops.CharmBase):
 
 
 if __name__ == "__main__":  # pragma: nocover
-    ops.main(TaskAPICharm)  # type: ignore
+    main(TaskAPICharm)  # type: ignore
