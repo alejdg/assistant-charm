@@ -77,7 +77,7 @@ class TaskAPIServer:
         """Run the configured bash commands."""
         try:
             result = subprocess.run(
-                command, shell=True, check=True, text=True, capture_output=True
+                command, shell=True, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE
             )
             return result.stdout
         except subprocess.CalledProcessError as e:
