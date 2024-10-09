@@ -27,8 +27,7 @@ bases:
       channel: "20.04"
     - name: ubuntu
       channel: "22.04"
-    - name: ubuntu
-      channel: "24.04"
+
 
 subordinate: True
 
